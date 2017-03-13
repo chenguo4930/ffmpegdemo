@@ -8,6 +8,7 @@ package com.example.cheng.ffmpegdemo;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.util.Log;
 import android.view.Surface;
 
 /**
@@ -25,16 +26,25 @@ public class MyVideoPlayer {
     public native void sound(String input, String output);
 
     /**
-     * 创建一个AudioTrack对象
+     * 创建一个AudioTrack对象，用于播放
+     *
      * @return
      */
-    public AudioTrack createAudioTrack() {
+    public AudioTrack createAudioTrack(int sampleRateInHz, int nb_channels) {
 
-        int sampleRateInHz = 44100;
-        int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
+        //固定格式的音频码流
+         int audioFormat = AudioFormat.ENCODING_PCM_16BIT;
+        Log.e("seven", "----nb_channerls = " + nb_channels);
         //声道布局 , 立体声，至少双声道，单声道可能有问题，单声道很少见
-        int channelConfig = AudioFormat.CHANNEL_OUT_STEREO;
-        int bufferSizeInBytes = AudioTrack.getMinBufferSize(44100, channelConfig, audioFormat);
+        int channelConfig  = AudioFormat.CHANNEL_IN_STEREO;
+        if (nb_channels == 1){
+            channelConfig = AudioFormat.CHANNEL_OUT_MONO;
+        }
+
+        int bufferSizeInBytes = AudioTrack.getMinBufferSize(
+                sampleRateInHz,
+                channelConfig,
+                audioFormat);
 
         AudioTrack audioTrack = new AudioTrack(
                 AudioManager.STREAM_MUSIC,

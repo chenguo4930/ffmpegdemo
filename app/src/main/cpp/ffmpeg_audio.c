@@ -4,6 +4,7 @@
 #include "com_example_cheng_ffmpegdemo_MyVideoPlayer.h"
 #include "com_example_cheng_ffmpegdemo_MyVideoPlayer.h"
 #include <android/log.h>
+#include <unistd.h>
 
 #define LOGI(FORMAT, ...) __android_log_print(ANDROID_LOG_INFO,"seven",FORMAT,##__VA_ARGS__);
 #define LOGE(FORMAT, ...) __android_log_print(ANDROID_LOG_ERROR,"seven",FORMAT,##__VA_ARGS__);
@@ -18,8 +19,8 @@
 #define MAX_AUDIO_FRME_SIZE 48000 * 4
 
 JNIEXPORT void JNICALL
-Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound(JNIEnv *env, jobject jobj, jstring input_jstr,
-                                                      jstring output_jstr) {
+Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound
+        (JNIEnv *env, jobject jobj, jstring input_jstr, jstring output_jstr) {
 
     const char *input_cstr = (*env)->GetStringUTFChars(env, input_jstr, NULL);
     const char *output_cstr = (*env)->GetStringUTFChars(env, output_jstr, NULL);
@@ -37,7 +38,7 @@ Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound(JNIEnv *env, jobject jobj,
         LOGE("%s", "无法获取输入文件信息");
         return;
     }
-    //获取音频六索引信息
+    //获取音频索引信息
     int audio_stream_index = -1;
     for (int i = 0; i < pFormatCtx->nb_streams; ++i) {
         if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -75,7 +76,7 @@ Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound(JNIEnv *env, jobject jobj,
     //输入采样率
     int in_sample_rate = codecCtx->sample_rate;
     //输出采样率
-    int out_sample_rate = 44100;
+    int out_sample_rate = in_sample_rate;
     //获取输入的声道的布局
     //根据声道个数获取默认的声道布局（2个声道，默认立体声stereo）
     //av_get_default_channel_layout(codecCtx->channels);
@@ -94,6 +95,27 @@ Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound(JNIEnv *env, jobject jobj,
 
     //重采样设置参数 --------end
 
+    //----------JNI begin 调用java层方法---------------
+    //MyVideoPlayer
+    jclass player_class = (*env)->GetObjectClass(env, jobj);
+
+    //获取AudioTrack对象
+    jmethodID create_audio_track_mid = (*env)->GetMethodID(env, player_class, "createAudioTrack",
+                                                           "(II)Landroid/media/AudioTrack;");
+    jobject audio_track = (*env)->CallObjectMethod(env, jobj, create_audio_track_mid,
+                                                   out_sample_rate, out_channel_nb);
+
+    //调用AudioTrack.play方法
+    jclass audio_track_class = (*env)->GetObjectClass(env, audio_track);
+    jmethodID audio_track_play_mid = (*env)->GetMethodID(env, audio_track_class, "play", "()V");
+    (*env)->CallVoidMethod(env, audio_track, audio_track_play_mid);
+
+    //调用AudioTrack.write
+    jmethodID audio_track_write_mid = (*env)->GetMethodID(env, audio_track_class, "write",
+                                                          "([BII)I");
+
+    //------------JNI end---------------
+
     // 16位 44100HZ PCM 数据 开辟大一点的空间，小了就容易出问题
     uint8_t *out_buffer = (uint8_t *) av_malloc(MAX_AUDIO_FRME_SIZE);
 
@@ -103,27 +125,50 @@ Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound(JNIEnv *env, jobject jobj,
     int got_frame = 0, index = 0, ret;
     //不断读取压缩数据
     while (av_read_frame(pFormatCtx, packet) >= 0) {
-        //解码
-        ret = avcodec_decode_audio4(codecCtx, frame, &got_frame, packet);
-        if (ret < 0) {
-            LOGE("%s", "解码完成");
+        if (packet->stream_index == audio_stream_index) {
+            //解码
+            ret = avcodec_decode_audio4(codecCtx, frame, &got_frame, packet);
+            if (ret < 0) {
+                LOGE("%s", "解码完成");
+            }
+            //解码一帧成功
+            if (got_frame > 0) {
+                LOGE("音频解码%d", index++);
+
+                //convert :　转换
+                swr_convert(swrContext,
+                            &out_buffer,
+                            MAX_AUDIO_FRME_SIZE,
+                            (const uint8_t **) frame->data,
+                            frame->nb_samples);
+
+                //获取每个sample的zise
+                int out_buffer_size = av_samples_get_buffer_size(NULL,
+                                                                 out_channel_nb,
+                                                                 frame->nb_samples,
+                                                                 out_sample_fmt,
+                                                                 1);
+                fwrite(out_buffer, 1, out_buffer_size, fp_pcm);
+
+                //out_buffer缓冲区数据，转成byte数组
+                jbyteArray audio_sample_array = (*env)->NewByteArray(env, out_buffer_size);
+                jbyte *sample_bytep = (*env)->GetByteArrayElements(env, audio_sample_array, NULL);
+                //out_buffer的数据复制到sampe_bytep
+                memcpy(sample_bytep, out_buffer, out_buffer_size);
+                //同步
+                (*env)->ReleaseByteArrayElements(env, audio_sample_array, sample_bytep, 0);
+
+                //AudioTrack.write PCM数据
+                (*env)->CallIntMethod(env, audio_track, audio_track_write_mid, audio_sample_array,
+                                      0, out_buffer_size);
+                //释放局部引用，防止内存泄漏
+                (*env)->DeleteLocalRef(env, audio_sample_array);
+                usleep(1000 * 16);
+            }
         }
-        //解码一帧成功
-        if (got_frame > 0) {
-            LOGE("音频解码%d", index++);
-
-            //convert :　转换
-            swr_convert(swrContext, &out_buffer, MAX_AUDIO_FRME_SIZE, frame->data,
-                        frame->nb_samples);
-
-            //获取每个sample的zise
-            int out_buffer_size = av_samples_get_buffer_size(NULL, out_channel_nb,
-                                                             frame->nb_samples, out_sample_fmt, 1);
-            fwrite(out_buffer, 1, out_buffer_size, fp_pcm);
-        }
-
         av_free_packet(packet);
     }
+
 
     //释放资源
     fclose(fp_pcm);
