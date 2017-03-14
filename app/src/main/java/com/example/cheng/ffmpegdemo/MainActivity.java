@@ -43,7 +43,8 @@ public class MainActivity extends AppCompatActivity {
 //        Surface surface = videoView.getHolder().getSurface();
 //        player.render(input, surface);
 
-        String input = new File(Environment.getExternalStorageDirectory(),"daoxiang.mp3").getAbsolutePath();
+//        String input = new File(Environment.getExternalStorageDirectory(),"daoxiang.mp3").getAbsolutePath();
+        String input = new File(Environment.getExternalStorageDirectory(),"oppo.mp4").getAbsolutePath();
         String output = new File(Environment.getExternalStorageDirectory(),"daoxiang.pcm").getAbsolutePath();
         player.sound(input,output);
 
