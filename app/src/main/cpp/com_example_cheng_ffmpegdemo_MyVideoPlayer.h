@@ -13,11 +13,13 @@ extern "C" {
  * Signature: ()V
  */
 JNIEXPORT void JNICALL
-Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_render(JNIEnv *, jobject ,jstring , jobject);
+Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_render(JNIEnv *, jobject, jstring, jobject);
 
 JNIEXPORT void JNICALL
-Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound(JNIEnv *, jobject ,jstring , jstring);
+Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_sound(JNIEnv *, jobject, jstring, jstring);
 
+JNIEXPORT void JNICALL
+Java_com_example_cheng_ffmpegdemo_MyVideoPlayer_play(JNIEnv *, jobject, jstring, jobject);
 
 #ifdef __cplusplus
 }

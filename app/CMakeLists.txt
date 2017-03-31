@@ -10,7 +10,9 @@ add_library( native-lib
              SHARED
             # src/main/cpp/native-lib.cpp
              src/main/cpp/ffmpeg_play.c
-             src/main/cpp/ffmpeg_audio.c)
+             src/main/cpp/ffmpeg_audio.c
+             src/main/cpp/player.c
+             src/main/cpp/queue.c)
 
 #变量
 set(distribution_DIR ../../../../libs)

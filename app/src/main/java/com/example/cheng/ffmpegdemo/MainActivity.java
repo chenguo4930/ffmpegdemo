@@ -3,6 +3,7 @@ package com.example.cheng.ffmpegdemo;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Surface;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -37,16 +38,17 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void mPlay(View btn){
-//        String video = mSpinner.getSelectedItem().toString();
-//        String input = new File(Environment.getExternalStorageDirectory(),video).getAbsolutePath();
-//        //Surface传入到Native函数中，用于绘制
-//        Surface surface = videoView.getHolder().getSurface();
+        String video = mSpinner.getSelectedItem().toString();
+        String input = new File(Environment.getExternalStorageDirectory(),video).getAbsolutePath();
+        //Surface传入到Native函数中，用于绘制
+        Surface surface = videoView.getHolder().getSurface();
 //        player.render(input, surface);
 
 //        String input = new File(Environment.getExternalStorageDirectory(),"daoxiang.mp3").getAbsolutePath();
-        String input = new File(Environment.getExternalStorageDirectory(),"oppo.mp4").getAbsolutePath();
-        String output = new File(Environment.getExternalStorageDirectory(),"daoxiang.pcm").getAbsolutePath();
-        player.sound(input,output);
+//        String input = new File(Environment.getExternalStorageDirectory(),"oppo.mp4").getAbsolutePath();
+//        String output = new File(Environment.getExternalStorageDirectory(),"daoxiang.pcm").getAbsolutePath();
+//        player.sound(input,output);
 
+        player.play(input,surface);
     }
 }

@@ -25,6 +25,9 @@ public class MyVideoPlayer {
 
     public native void sound(String input, String output);
 
+    public native void play(String input,Surface surface);
+
+
     /**
      * 创建一个AudioTrack对象，用于播放
      *
